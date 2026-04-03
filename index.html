@@ -3,35 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <title>Henry Space 預約系統</title>
-  </head>
-<body><h1>測試網頁是否正常</h1>
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+  <style>
+    body { font-family: sans-serif; background-color: #0f172a; color: white; padding: 20px; }
+    #calendar { max-width: 900px; margin: 0 auto; background: #1e293b; padding: 20px; border-radius: 8px; }
+    /* 如果你有原本漂亮的 CSS，請貼在這裡 */
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center">Henry Space 練團室預約</h1>
+  <div id='calendar'></div>
+
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6oWeX2JArADxpQ3WLU9q3T9utqfj9HniHVvls58eXEAHWPMAgUo7KMBikdyIeKacg/exec'; // <--- 關鍵修改
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6OWeX2JArADxpQ3WLU9q3T9tqfj9HniHVls58eXEAHWPMAGUo7KMBikdyIeKacg/exec';
 
-    // 讀取資料：將 google.script.run 改為 fetch
-    function loadEvents() {
-      fetch(GAS_URL)
-        .then(res => res.json())
-        .then(events => {
-          calendar.removeAllEvents();
-          if (events) calendar.addEventSource(events);
-        });
-    }
-
-    // 儲存預約：將 google.script.run 改為 POST fetch
-    function submitBooking(data) {
-      fetch(GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'save', data: data })
-      })
-      .then(res => res.json())
-      .then(msg => {
-        showToast(msg);
-        loadEvents();
+    document.addEventListener('DOMContentLoaded', function() {
+      var calendarEl = document.getElementById('calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'zh-tw',
+        allDaySlot: false,
+        slotMinTime: '08:00:00',
+        slotMaxTime: '23:00:00',
+        events: function(info, successCallback, failureCallback) {
+          fetch(GAS_URL)
+            .then(res => res.json())
+            .then(data => successCallback(data))
+            .catch(err => console.error("抓取失敗:", err));
+        }
       });
-    }
-    
-    // ... 其他原本的 JavaScript 邏輯 ...
+      calendar.render();
+    });
   </script>
 </body>
 </html>
