@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Henry Space 預約系統</title>
+  </head>
+<body>
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6oWeX2JArADxpQ3WLU9q3T9utqfj9HniHVvls58eXEAHWPMAgUo7KMBikdyIeKacg/exec'; // <--- 關鍵修改
+
+    // 讀取資料：將 google.script.run 改為 fetch
+    function loadEvents() {
+      fetch(GAS_URL)
+        .then(res => res.json())
+        .then(events => {
+          calendar.removeAllEvents();
+          if (events) calendar.addEventSource(events);
+        });
+    }
+
+    // 儲存預約：將 google.script.run 改為 POST fetch
+    function submitBooking(data) {
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'save', data: data })
+      })
+      .then(res => res.json())
+      .then(msg => {
+        showToast(msg);
+        loadEvents();
+      });
+    }
+    
+    // ... 其他原本的 JavaScript 邏輯 ...
+  </script>
+</body>
+</html>
