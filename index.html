@@ -7,11 +7,10 @@
   <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
   <style>
-    /* 配色與版面佈局 */
     body { font-family: "Microsoft JhengHei", sans-serif; background-color: #0f172a; color: #f1f5f9; margin: 0; padding: 10px; }
     #calendar { max-width: 1100px; margin: 20px auto; background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; }
     
-    /* 5. 公告欄樣式 (仿圖片一) */
+    /* 右側公告樣式 */
     #announcementSide { position: fixed; right: -360px; top: 60px; width: 340px; background: #1e293b; border-left: 4px solid #f59e0b; padding: 0; transition: 0.4s; z-index: 1002; box-shadow: -5px 0 20px rgba(0,0,0,0.6); border-radius: 8px 0 0 8px; }
     #announcementSide.active { right: 0; }
     #announcementTab { position: absolute; left: -45px; top: 20px; width: 45px; background: #f59e0b; color: #000; padding: 15px 5px; cursor: pointer; border-radius: 10px 0 0 10px; font-weight: bold; text-align: center; }
@@ -20,27 +19,27 @@
     .notice-box { background: #451a03; border: 1px solid #d97706; color: #fef3c7; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 15px; }
 
     /* 彈窗樣式 */
-    .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e293b; padding: 25px; border-radius: 16px; border: 1px solid #475569; z-index: 1000; width: 90%; max-width: 450px; }
+    .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e293b; padding: 25px; border-radius: 16px; border: 1px solid #475569; z-index: 1000; width: 90%; max-width: 450px; color: white; }
     .modal.active { display: block; }
     .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; }
     .overlay.active { display: block; }
 
-    /* 通知 Toast (綠底白字) */
-    #toast { position: fixed; top: 20px; right: -350px; background: #10b981; color: white; padding: 15px 30px; border-radius: 8px; transition: 0.5s; z-index: 2000; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    #toast { position: fixed; top: 20px; right: -350px; background: #10b981; color: white; padding: 15px 30px; border-radius: 8px; transition: 0.5s; z-index: 2000; font-weight: bold; }
     #toast.show { right: 20px; }
 
     .input-field { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; font-size: 1rem; }
-    .input-field:disabled { opacity: 0.7; cursor: not-allowed; background: #334155; }
+    .input-field:disabled { opacity: 0.6; cursor: not-allowed; background: #1e293b; }
     
     .status-badge { display: inline-block; padding: 8px 20px; border-radius: 6px; font-size: 1.2rem; font-weight: bold; margin: 15px 0; width: 100%; text-align: center; box-sizing: border-box; }
     .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-    .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-size: 1rem; }
+    .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
     .btn-primary { background: #3b82f6; color: white; }
     .btn-danger { background: #ef4444; color: white; }
     .btn-close { background: #475569; color: white; }
 
-    /* 日曆內活動文字換行 */
-    .fc-event-title { white-space: pre-wrap !important; font-size: 0.85rem; line-height: 1.3; }
+    /* 修正日曆標題格式：確保換行生效 */
+    .fc-event-main-frame { flex-direction: column; }
+    .fc-event-title { white-space: pre-wrap !important; font-size: 0.9rem !important; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -52,19 +51,15 @@
     <div class="announce-content">
       <div class="announce-header">📢 預約須知與公告</div>
       <div class="notice-box">
-        <b>【2026/04/03公告】</b> 本網站於4/3起改版，並優化版面及新增取消預約功能，請多加利用。<br><br>
-        <b>【2026/02/10公告】<b>系統顯示不開放時段若需使用，請以「紙本」申請表並經主管同意後始得使用<br>🔗 <a href="https://reurl.cc/dq69W8" target="_blank">紙本申請表連結</a></li>
+        <b>【2026/04/03公告】</b> 本網站於4/3起改版，並優化版面及新增取消預約功能。<br><br>
+        <b>【2026/02/10公告】</b>系統顯示不開放時段若需使用，請使用紙本申請。<br>🔗 <a href="https://reurl.cc/dq69W8" target="_blank" style="color:#fcd34d">紙本申請表連結</a>
       </div>
-      <div style="font-size: 0.9rem; color: #94a3b8; line-height: 1.8;">
-        <li>填寫預約資料時請務必完整填寫正確使用目的、聯絡電話、姓名</li>
-        <li>使用前20分鐘請憑借用人識別證到資工組辦公室領取門禁管制卡</li>
-        <li>使用完畢後請務必將設備&器材歸回原位</li>
-        <li>有任何問題請聯絡資訊及工程組 分機#7032 官方LINE <a href="https://lin.ee/TY5Xf1q" target="_blank">@008fwobe</a></li>
-        <li>新版預約系統載入預約資料較慢，網頁開啟後請等待10秒後再動作</li>
-        <li>預約僅開放30天內，預約超過30天時間 審核時會視為無效預約</li>
-        <li>預約後須等待場地管理員審核後顯示核准使用才是完全完成登記程序</li>
-      </div>
-      <button class="btn btn-close" style="width:100%; margin-top:20px;" onclick="toggleAnnounce()">關閉</button>
+      <ul style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; padding-left: 15px;">
+        <li>填寫資料時請務必完整填寫正確目的、電話、姓名。</li>
+        <li>使用前20分請至資工組辦公室領取門禁卡。</li>
+        <li>預約僅開放30天內，超過將視為無效。</li>
+      </ul>
+      <button class="btn btn-close" style="width:100%; margin-top:10px;" onclick="toggleAnnounce()">關閉</button>
     </div>
   </div>
 
@@ -77,8 +72,14 @@
     <h3 id="modalTitle">建立預約</h3>
     <div style="font-size: 14px; color: #94a3b8;">預約人姓名：</div>
     <input type="text" id="userName" class="input-field">
+    
     <div style="font-size: 14px; color: #94a3b8;">使用目的：</div>
     <input type="text" id="userPurpose" class="input-field">
+
+    <div id="phoneInputArea">
+      <div style="font-size: 14px; color: #94a3b8;">聯絡電話：</div>
+      <input type="tel" id="userPhone" class="input-field" placeholder="身分識別與通知用">
+    </div>
     
     <div style="font-size: 14px; color: #94a3b8; margin-top:10px;">開始時間：</div>
     <select id="startTime" class="input-field"></select>
@@ -108,10 +109,9 @@
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6oWeX2JArADxpQ3WLU9q3T9utqfj9HniHVvls58eXEAHWPMAgUo7KMBikdyIeKacg/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6OWeX2JArADxpQ3WLU9q3T9utqfj9HniHVvls58eXEAHWPMAgUo7KMBikdyIeKacg/exec';
     let calendar, currentInfo;
 
-    // 產生 08:00 ~ 23:00 每 30 分鐘的選項
     function generateTimeOptions() {
       const start = document.getElementById('startTime');
       const end = document.getElementById('endTime');
@@ -144,18 +144,18 @@
           fetch(GAS_URL)
             .then(res => res.json())
             .then(data => {
-              // 1. 排除已取消的活動
+              // 2. 修復：過濾掉狀態為「已取消」的活動，不顯示在日曆上
               const activeEvents = data.filter(e => e.extendedProps.status !== "已取消")
                 .map(e => ({
                   ...e,
-                  // 2. 格式化日曆標題
+                  // 1. 修正：格式化標題為 使用目的 \n 姓名 \n 狀態
                   title: `${e.title}\n${e.extendedProps.name}\n[${e.extendedProps.status || '等待審核'}]`,
                   backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
                   borderColor: 'transparent'
                 }));
               successCallback(activeEvents);
             })
-            .catch(err => console.error("Data fetch error:", err));
+            .catch(err => console.error("抓取失敗", err));
         },
 
         select: function(info) { openBookingModal('new', info); },
@@ -171,16 +171,21 @@
       document.getElementById('overlay').classList.add('active');
       document.getElementById('bookingModal').classList.add('active');
       
-      const inputs = [document.getElementById('userName'), document.getElementById('userPurpose'), document.getElementById('startTime'), document.getElementById('endTime')];
+      const fields = ['userName', 'userPurpose', 'userPhone', 'startTime', 'endTime'];
 
       if(type === 'new') {
         document.getElementById('modalTitle').innerText = "建立預約";
         document.getElementById('saveBtn').style.display = "block";
         document.getElementById('cancelBtn').style.display = "none";
         document.getElementById('statusArea').style.display = "none";
-        inputs.forEach(i => { i.value = ""; i.disabled = false; });
+        document.getElementById('phoneInputArea').style.display = "block"; // 預約時顯示電話輸入
         
-        // 自動帶入選取的 30 分鐘時段
+        fields.forEach(id => {
+          const el = document.getElementById(id);
+          el.value = "";
+          el.disabled = false;
+        });
+
         document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
         document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
       } else {
@@ -188,9 +193,10 @@
         document.getElementById('saveBtn').style.display = "none";
         document.getElementById('cancelBtn').style.display = "block";
         document.getElementById('statusArea').style.display = "block";
+        document.getElementById('phoneInputArea').style.display = "none"; // 詳情隱藏電話
+
+        fields.forEach(id => document.getElementById(id).disabled = true);
         
-        // 4. 點入詳細資訊設為不可編輯 (Disabled)
-        inputs.forEach(i => i.disabled = true);
         document.getElementById('userName').value = info.extendedProps.name;
         document.getElementById('userPurpose').value = info.title.split('\n')[0];
         document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
@@ -203,17 +209,19 @@
       }
     }
 
+    // 3. 整合後的新增預約邏輯
     document.getElementById('saveBtn').onclick = function() {
       const name = document.getElementById('userName').value;
       const purpose = document.getElementById('userPurpose').value;
+      const phone = document.getElementById('userPhone').value; // 直接從輸入框讀取
       const startT = document.getElementById('startTime').value;
       const endT = document.getElementById('endTime').value;
-      const phone = prompt("請輸入聯絡電話：");
       
-      if(!name || !purpose || !phone) return alert("所有欄位均為必填");
+      if(!name || !purpose || !phone) return alert("姓名、目的與電話均為必填");
 
       const dateStr = currentInfo.startStr.split('T')[0];
       this.innerText = "傳送中...";
+      this.disabled = true;
       
       fetch(GAS_URL, {
         method: 'POST',
@@ -231,7 +239,7 @@
 
     document.getElementById('confirmDeleteBtn').onclick = function() {
       const phone = document.getElementById('verifyPhone').value;
-      if(!phone) return alert("請輸入電話");
+      if(!phone) return alert("請輸入電話以供驗證");
 
       this.innerText = "處理中...";
       fetch(GAS_URL, {
