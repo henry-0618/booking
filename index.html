@@ -1,31 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Henry Space 預約系統</title>
   <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
   <style>
-    body { font-family: sans-serif; background-color: #0f172a; color: white; padding: 20px; }
-    #calendar { max-width: 900px; margin: 0 auto; background: #1e293b; padding: 20px; border-radius: 8px; }
-    /* 如果你有原本漂亮的 CSS，請貼在這裡 */
+    body { font-family: sans-serif; background-color: #0f172a; color: white; padding: 10px; margin: 0; }
+    #calendar { max-width: 900px; margin: 20px auto; background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; }
+    /* 預約視窗樣式 */
+    .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e293b; padding: 25px; border-radius: 16px; border: 1px solid #475569; z-index: 100; width: 85%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .modal.active { display: block; }
+    .modal input, .modal select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; }
+    .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+    .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-save { background: #3b82f6; color: white; }
+    .btn-cancel { background: #475569; color: white; }
+    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99; }
+    .overlay.active { display: block; }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center">Henry Space 練團室預約</h1>
+
+  <h2 style="text-align: center;">🎸 Henry Space 練團室預約</h2>
   <div id='calendar'></div>
 
+  <div class="overlay" id="overlay"></div>
+  <div class="modal" id="bookingModal">
+    <h3>建立預約</h3>
+    <input type="text" id="userName" placeholder="預約人姓名">
+    <input type="text" id="userPurpose" placeholder="使用目的 (例：個人練習)">
+    <input type="tel" id="userPhone" placeholder="聯絡電話 (取消時驗證用)">
+    <div style="font-size: 14px; color: #94a3b8;">預約時段：<span id="selectedTimeText"></span></div>
+    <div class="btn-group">
+      <button class="btn btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn btn-save" id="saveBtn">確認預約</button>
+    </div>
+  </div>
+
   <script>
+    // 🌟 請確保這裡填入的是你最新的 GAS 部署網址 🌟
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6OWeX2JArADxpQ3WLU9q3T9tqfj9HniHVls58eXEAHWPMAGUo7KMBikdyIeKacg/exec';
+
+    let selectedInfo = null;
 
     document.addEventListener('DOMContentLoaded', function() {
       var calendarEl = document.getElementById('calendar');
       var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'timeGridWeek',
+        initialView: window.innerWidth < 768 ? 'timeGridDay' : 'timeGridWeek',
         locale: 'zh-tw',
         allDaySlot: false,
+        selectable: true, // 讓他可以被點選！
         slotMinTime: '08:00:00',
         slotMaxTime: '23:00:00',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
+        
+        // 點擊空白處動作
+        select: function(info) {
+          selectedInfo = info;
+          document.getElementById('selectedTimeText').innerText = 
+            info.start.toLocaleString([], {hour: '2-digit', minute:'2-digit'}) + ' ~ ' + 
+            info.end.toLocaleString([], {hour: '2-digit', minute:'2-digit'});
+          openModal();
+        },
+
+        // 讀取資料
         events: function(info, successCallback, failureCallback) {
           fetch(GAS_URL)
             .then(res => res.json())
@@ -34,7 +74,51 @@
         }
       });
       calendar.render();
+
+      // 儲存預約動作
+      document.getElementById('saveBtn').onclick = function() {
+        const name = document.getElementById('userName').value;
+        const purpose = document.getElementById('userPurpose').value;
+        const phone = document.getElementById('userPhone').value;
+
+        if(!name || !phone) return alert("請填寫姓名與電話");
+
+        const bookingData = {
+          action: 'save',
+          data: {
+            name: name,
+            purpose: purpose,
+            phone: phone,
+            start: selectedInfo.startStr,
+            end: selectedInfo.endStr
+          }
+        };
+
+        this.innerText = "傳送中...";
+        this.disabled = true;
+
+        fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(bookingData)
+        })
+        .then(res => res.json())
+        .then(res => {
+          alert(res.msg);
+          location.reload(); // 成功後重整網頁
+        })
+        .catch(err => alert("錯誤: " + err));
+      };
     });
+
+    function openModal() {
+      document.getElementById('bookingModal').classList.add('active');
+      document.getElementById('overlay').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('bookingModal').classList.remove('active');
+      document.getElementById('overlay').classList.remove('active');
+    }
   </script>
 </body>
 </html>
