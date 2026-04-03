@@ -8,8 +8,22 @@
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
   <style>
     body { font-family: "Microsoft JhengHei", sans-serif; background-color: #0f172a; color: #f1f5f9; margin: 0; padding: 10px; }
-    #calendar { max-width: 1100px; margin: 20px auto; background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; }
     
+    /* 2. 日曆外框與格線顏色修正 */
+    #calendar { 
+      max-width: 1100px; 
+      margin: 20px auto; 
+      background: #1e293b; 
+      padding: 15px; 
+      border-radius: 12px; 
+      border: 2px solid #ffffff; /* 最外框白色 */
+    }
+    
+    /* FullCalendar 內部格線改為淺灰色 */
+    .fc { 
+      --fc-border-color: #4b5563; /* 這裡設定內部格線為淺灰色 (Gray-600) */
+    }
+
     /* 右側公告樣式 */
     #announcementSide { position: fixed; right: -360px; top: 60px; width: 340px; background: #1e293b; border-left: 4px solid #f59e0b; padding: 0; transition: 0.4s; z-index: 1002; box-shadow: -5px 0 20px rgba(0,0,0,0.6); border-radius: 8px 0 0 8px; }
     #announcementSide.active { right: 0; }
@@ -37,9 +51,14 @@
     .btn-danger { background: #ef4444; color: white; }
     .btn-close { background: #475569; color: white; }
 
-    /* 修正日曆標題格式：確保換行生效 */
-    .fc-event-main-frame { flex-direction: column; }
-    .fc-event-title { white-space: pre-wrap !important; font-size: 0.9rem !important; font-weight: 500; }
+    /* 3. 日曆活動文字格式優化 */
+    .fc-event-main { padding: 2px; }
+    .fc-event-title { 
+      white-space: pre-wrap !important; 
+      font-size: 0.85rem !important; 
+      line-height: 1.4 !important;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -48,26 +67,15 @@
 
   <div id="announcementSide">
     <div id="announcementTab" onclick="toggleAnnounce()">📢 公告與提醒</div>
-
     <div class="announce-content">
-
       <div class="announce-header">📢 預約須知與公告</div>
-
       <div class="notice-box">
-
-        <b>【2026/04/03公告】</b> 本網站於4/3起改版，並優化版面及新增取消預約功能，請多加利用。<br><br>
-
-        <b>【2026/02/10公告】<b>系統顯示不開放時段若需使用，請以「紙本」申請表並經主管同意後始得使用<br>🔗 <a href="https://reurl.cc/dq69W8" target="_blank">紙本申請表連結</a></li>
+        <b>【2026/04/03公告】</b> 本網站於4/3起改版，並優化版面及新增取消預約功能。
       </div>
-      <div style="font-size: 0.9rem; color: #94a3b8; line-height: 1.8;">
-        <li>填寫預約資料時請務必完整填寫正確使用目的、聯絡電話、姓名</li>
-        <li>使用前20分鐘請憑借用人識別證到資工組辦公室領取門禁管制卡</li>
-        <li>使用完畢後請務必將設備&器材歸回原位</li>
-        <li>有任何問題請聯絡資訊及工程組 分機#7032 官方LINE <a href="https://lin.ee/TY5Xf1q" target="_blank">@008fwobe</a></li>
-        <li>新版預約系統載入預約資料較慢，網頁開啟後請等待10秒後再動作</li>
-        <li>預約僅開放30天內，預約超過30天時間 審核時會視為無效預約</li>
-        <li>預約後須等待場地管理員審核後顯示核准使用才是完全完成登記程序</li>
-        </div>
+      <ul style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; padding-left: 15px;">
+        <li>填寫資料時請務必完整填寫正確目的、電話、姓名。</li>
+        <li>使用前20分請至資工組辦公室領取門禁卡。</li>
+      </ul>
       <button class="btn btn-close" style="width:100%; margin-top:10px;" onclick="toggleAnnounce()">關閉</button>
     </div>
   </div>
@@ -118,7 +126,7 @@
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6oWeX2JArADxpQ3WLU9q3T9utqfj9HniHVvls58eXEAHWPMAgUo7KMBikdyIeKacg/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbx4y7C7SU777PWlv4hEF0QLAHRmjJG3-XfKDxSKlP290AbsYOmOdBrp78KwcvuZvAVN/exec';
     let calendar, currentInfo;
 
     function generateTimeOptions() {
@@ -153,15 +161,21 @@
           fetch(GAS_URL)
             .then(res => res.json())
             .then(data => {
-              // 2. 修復：過濾掉狀態為「已取消」的活動，不顯示在日曆上
-              const activeEvents = data.filter(e => e.extendedProps.status !== "已取消")
-                .map(e => ({
+              // 1. 修正：過濾掉狀態包含「取消」字樣的活動
+              const activeEvents = data.filter(e => {
+                const status = e.extendedProps.status || "";
+                return !status.includes("取消");
+              })
+              .map(e => {
+                // 3. 修正標題格式：目的 \n 姓名 \n 狀態 (無括號)
+                const displayStatus = e.extendedProps.status || '等待審核';
+                return {
                   ...e,
-                  // 1. 修正：格式化標題為 使用目的 \n 姓名 \n 狀態
-                  title: `${e.title}\n${e.extendedProps.name}\n[${e.extendedProps.status || '等待審核'}]`,
-                  backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
+                  title: `${e.title}\n${e.extendedProps.name}\n${displayStatus}`,
+                  backgroundColor: displayStatus === "核准使用" ? "#10b981" : "#f59e0b",
                   borderColor: 'transparent'
-                }));
+                };
+              });
               successCallback(activeEvents);
             })
             .catch(err => console.error("抓取失敗", err));
@@ -179,7 +193,6 @@
       currentInfo = info;
       document.getElementById('overlay').classList.add('active');
       document.getElementById('bookingModal').classList.add('active');
-      
       const fields = ['userName', 'userPurpose', 'userPhone', 'startTime', 'endTime'];
 
       if(type === 'new') {
@@ -187,14 +200,8 @@
         document.getElementById('saveBtn').style.display = "block";
         document.getElementById('cancelBtn').style.display = "none";
         document.getElementById('statusArea').style.display = "none";
-        document.getElementById('phoneInputArea').style.display = "block"; // 預約時顯示電話輸入
-        
-        fields.forEach(id => {
-          const el = document.getElementById(id);
-          el.value = "";
-          el.disabled = false;
-        });
-
+        document.getElementById('phoneInputArea').style.display = "block";
+        fields.forEach(id => { const el = document.getElementById(id); el.value = ""; el.disabled = false; });
         document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
         document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
       } else {
@@ -202,15 +209,12 @@
         document.getElementById('saveBtn').style.display = "none";
         document.getElementById('cancelBtn').style.display = "block";
         document.getElementById('statusArea').style.display = "block";
-        document.getElementById('phoneInputArea').style.display = "none"; // 詳情隱藏電話
-
+        document.getElementById('phoneInputArea').style.display = "none";
         fields.forEach(id => document.getElementById(id).disabled = true);
-        
         document.getElementById('userName').value = info.extendedProps.name;
         document.getElementById('userPurpose').value = info.title.split('\n')[0];
         document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
         document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
-        
         const status = info.extendedProps.status || "等待審核";
         const st = document.getElementById('statusText');
         st.innerText = status;
@@ -218,20 +222,16 @@
       }
     }
 
-    // 3. 整合後的新增預約邏輯
     document.getElementById('saveBtn').onclick = function() {
       const name = document.getElementById('userName').value;
       const purpose = document.getElementById('userPurpose').value;
-      const phone = document.getElementById('userPhone').value; // 直接從輸入框讀取
+      const phone = document.getElementById('userPhone').value;
       const startT = document.getElementById('startTime').value;
       const endT = document.getElementById('endTime').value;
-      
       if(!name || !purpose || !phone) return alert("姓名、目的與電話均為必填");
-
       const dateStr = currentInfo.startStr.split('T')[0];
       this.innerText = "傳送中...";
       this.disabled = true;
-      
       fetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({
@@ -249,7 +249,6 @@
     document.getElementById('confirmDeleteBtn').onclick = function() {
       const phone = document.getElementById('verifyPhone').value;
       if(!phone) return alert("請輸入電話以供驗證");
-
       this.innerText = "處理中...";
       fetch(GAS_URL, {
         method: 'POST',
