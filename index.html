@@ -162,7 +162,7 @@
                   return {
                     ...e,
                     // 標題修正：第一行目的，第二行姓名，第三行狀態
-                    title: `${e.title}\n${e.extendedProps.name}\n${statusLabel}`,
+                    title: `${statusLabel}\n${e.extendedProps.name}\n${e.title}`,
                     backgroundColor: statusLabel === "核准使用" ? "#10b981" : "#f59e0b",
                     borderColor: 'transparent'
                   };
