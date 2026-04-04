@@ -110,7 +110,6 @@
     </div>
   </div>
 
-
   <h2 style="text-align: center;">🎸 Henry Space 練團室預約系統</h2>
   <div id='calendar'></div>
 
@@ -152,11 +151,11 @@
   </div>
 
   <script>
+    // 記得將此處的 GAS_URL 替換為你重新部署後的新網址
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuH6oWeX2JArADxpQ3WLU9q3T9utqfj9HniHVvls58eXEAHWPMAgUo7KMBikdyIeKacg/exec';
     let calendar, currentEvent;
 
     // 公告欄切換
-
     function toggleAnnounce() { 
       document.getElementById('announcementSide').classList.toggle('collapsed'); 
     }
@@ -250,28 +249,41 @@
       }
     }
 
-    // 1. 儲存預約部分 (整合你提供的修正代碼)
-    document.getElementById('saveBtn').onclick = function() {
+    // 1. 儲存預約部分 (新增非同步抓取 IP 功能)
+    document.getElementById('saveBtn').onclick = async function() {
       const name = document.getElementById('userName').value;
       const purpose = document.getElementById('userPurpose').value;
       const phone = document.getElementById('userPhone').value;
       const startT = document.getElementById('startTime').value;
       const endT = document.getElementById('endTime').value;
-    
+      
       if(!name || !purpose || !phone) {
         showToast("❌ 請填寫完整資料", true); 
         return;
       }
 
+      this.innerText = "獲取連線資訊...";
+      this.disabled = true;
+
+      // 取得 IP
+      let userIp = "Unknown";
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        userIp = ipData.ip;
+      } catch (e) {
+        console.error("無法獲取 IP", e);
+      }
+
       const dateStr = currentEvent.startStr.split('T')[0];
       this.innerText = "傳送中...";
-      this.disabled = true;
 
       fetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({
           action: 'save',
-          data: { name, purpose, phone, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00` }
+          // 將取得的 IP 放入 data 中傳給後端
+          data: { name, purpose, phone, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00`, ip: userIp }
         })
       }).then(() => {
         showToast("✅ 預約已送出，請等候審核");
@@ -286,7 +298,7 @@
     // 取消按鈕觸發驗證視窗
     document.getElementById('cancelBtn').onclick = () => document.getElementById('verifyModal').classList.add('active');
 
-    // 2. 執行取消邏輯 (整合你提供的修正代碼)
+    // 2. 執行取消邏輯
     document.getElementById('confirmDeleteBtn').onclick = function() {
       const phone = document.getElementById('verifyPhone').value;
       if(!phone) {
@@ -330,4 +342,3 @@
   </script>
 </body>
 </html>
-
