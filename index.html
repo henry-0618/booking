@@ -195,7 +195,8 @@
                 })
                 .map(e => ({
                   ...e,
-                  title: e.title,  // <-- 這裡改成這樣，不換行也不加上姓名與狀態
+                  // 順序：1.目的(e.title) 2.姓名(e.extendedProps.name) 3.狀態
+                  title: `${e.title}\n${e.extendedProps.name}\n${e.extendedProps.status || '等待審核'}`,
                   backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
                   borderColor: 'transparent'
                 }));
