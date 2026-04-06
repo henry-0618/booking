@@ -195,7 +195,7 @@
                 })
                 .map(e => ({
                   ...e,
-                  title: `${e.title}\n${e.extendedProps.name}\n${e.extendedProps.status || '等待審核'}`,
+                  title: e.title,  // <-- 這裡改成這樣，不換行也不加上姓名與狀態
                   backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
                   borderColor: 'transparent'
                 }));
