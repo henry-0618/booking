@@ -26,27 +26,27 @@
     .tab-btn { padding: 10px 25px; border-radius: 20px; border: 1px solid #475569; background: #1e293b; color: #94a3b8; cursor: pointer; transition: 0.3s; font-weight: bold; }
     .tab-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
 
-    /* 清單模式容器與卡片 */
-    #listView { display: none; max-width: 1000px; margin: 0 auto; }
+    /* 清單模式修正 (5行格式樣式) */
+    #listView { display: none; max-width: 800px; margin: 0 auto; }
     .list-card { 
-      background: #1e293b; border-radius: 12px; padding: 18px; margin-bottom: 15px; 
+      background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
       border-left: 6px solid #3b82f6; cursor: pointer; transition: 0.2s;
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      display: flex; flex-direction: column; gap: 8px; /* 強制垂直排列 */
     }
     .list-card:hover { transform: translateX(5px); background: #2d3a4f; }
     
-    .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 10px; }
-    .card-title { font-size: 1.25rem; font-weight: bold; color: #fcd34d; }
-    
-    .badge-group { display: flex; gap: 8px; }
+    /* 5行對應樣式 */
+    .line-1 { font-size: 1.3rem; font-weight: bold; color: #fcd34d; } /* 使用目的 */
+    .line-2 { display: flex; gap: 8px; align-items: center; } /* 狀態與使用人 */
+    .line-3, .line-4, .line-5 { color: #94a3b8; font-size: 0.95rem; }
+
     .badge { padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: white; }
-    .status-approved { background-color: #10b981; } /* 綠色 */
-    .status-pending { background-color: #f59e0b; }  /* 橘色 */
-    .badge-user { background-color: #334155; color: #cbd5e1; } /* 深藍灰 */
+    .status-approved { background-color: #10b981; } 
+    .status-pending { background-color: #f59e0b; }  
+    .badge-user { background-color: #3b82f6; color: white; } 
 
-    .card-bottom { color: #94a3b8; font-size: 0.9rem; }
-
-    /* 公告欄與彈窗（保留你原本的樣式） */
+    /* 公告欄與彈窗（保留原本樣式） */
     #announcementSide { position: fixed; right: 0px; top: 60px; width: 340px; background: #1e293b; border-left: 4px solid #f59e0b; padding: 0; transition: 0.4s; z-index: 1002; box-shadow: -5px 0 20px rgba(0,0,0,0.6); border-radius: 8px 0 0 8px; }
     #announcementSide.collapsed { right: -340px; }
     #announcementTab { position: absolute; left: -45px; top: 20px; width: 45px; background: #f59e0b; color: #000; padding: 15px 5px; cursor: pointer; border-radius: 10px 0 0 10px; font-weight: bold; text-align: center; }
@@ -80,14 +80,13 @@
     <div class="announce-content">
       <div class="announce-header">📢 預約須知與公告</div>
       <div class="notice-box">
-        <b>【通知】</b> 取消時若驗證失敗請嘗試將電話開頭0去除<br><br>
-        <b>【2026/04/03公告】</b> 本網站於4/3起改版，優化版面並新增清單查詢功能。<br><br>
+        <b>【通知】</b> 清單模式已改版為 5 行詳細格式。<br><br>
+        <b>【提醒】</b> 取消時若驗證失敗請嘗試將電話開頭0去除。<br><br>
         🔗 <a href="https://reurl.cc/dq69W8" target="_blank" style="color: #fcd34d;">紙本申請表連結</a>
       </div>
       <div style="font-size: 0.9rem; color: #94a3b8; line-height: 1.8;">
         <li>使用前20分鐘憑識別證到資工組領取門禁卡</li>
         <li>預約須等待場地管理員審核顯示「核准使用」</li>
-        <li>預約系統載入較慢，請開啟後等待數秒</li>
       </div>
       <button class="btn btn-close" style="width:100%; margin-top:20px;" onclick="toggleAnnounce()">關閉</button>
     </div>
@@ -149,7 +148,6 @@
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbyEUYfS2Mc4iUwtK2T_PPkwkXcT7YJKYMMOGjWUXC4BDmfXIbYSoHg7ybEoLIT56hDyCw/exec';
     let calendar, currentEvent;
 
-    // 1. 切換模式
     function switchView(view) {
       const calEl = document.getElementById('calendar');
       const listEl = document.getElementById('listView');
@@ -157,26 +155,20 @@
       const listTab = document.getElementById('listTab');
 
       if (view === 'calendar') {
-        calEl.style.display = 'block';
-        listEl.style.display = 'none';
-        calTab.classList.add('active');
-        listTab.classList.remove('active');
+        calEl.style.display = 'block'; listEl.style.display = 'none';
+        calTab.classList.add('active'); listTab.classList.remove('active');
         calendar.render();
       } else {
-        calEl.style.display = 'none';
-        listEl.style.display = 'block';
-        listTab.classList.add('active');
-        calTab.classList.remove('active');
-        renderListView(); // 每次切換到清單都重新生成一次
+        calEl.style.display = 'none'; listEl.style.display = 'block';
+        listTab.classList.add('active'); calTab.classList.remove('active');
+        renderListView();
       }
     }
 
-    // 2. 生成清單視圖
+    // 更新：修正後的 5 行清單模式
     function renderListView() {
       const container = document.getElementById('listContainer');
       const events = calendar.getEvents();
-      
-      // 依照時間排序 (由新到舊)
       const sortedEvents = events.sort((a, b) => b.start - a.start);
 
       if (sortedEvents.length === 0) {
@@ -185,31 +177,34 @@
       }
 
       container.innerHTML = sortedEvents.map(event => {
-        const status = event.extendedProps.status || "等待審核";
+        const p = event.extendedProps;
+        const status = p.status || "等待審核";
         const statusClass = status === "核准使用" ? "status-approved" : "status-pending";
-        // 格式化顯示時間
-        const dateStr = event.start.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short' });
-        const timeStr = event.start.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+        
+        // 格式化借用時間 (第 3 行)
+        const startStr = event.start.toLocaleString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
+        const endStr = event.end.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12:false });
 
         return `
           <div class="list-card" onclick="openBookingModal('detail', calendar.getEventById('${event.id}'))">
-            <div class="card-top">
-              <div class="card-title">${event.title.split('\n')[0]}</div>
-              <div class="badge-group">
-                <span class="badge ${statusClass}">${status}</span>
-                <span class="badge badge-user">${event.extendedProps.name}</span>
-              </div>
+            <div class="line-1">${event.title.split('\n')[0]}</div>
+            
+            <div class="line-2">
+              <span class="badge ${statusClass}">${status}</span>
+              <span class="badge badge-user">${p.name}</span>
             </div>
-            <div class="card-bottom">
-              📅 ${dateStr} ｜ ⏰ ${timeStr}
-            </div>
+
+            <div class="line-3">📅 借用時間：${startStr} ~ ${endStr}</div>
+
+            <div class="line-4">📝 登記時間：${p.regTime || '無資料'}</div>
+
+            <div class="line-5">🆔 登記編號：${p.regId || '無編號'}</div>
           </div>
         `;
       }).join('');
       document.getElementById('loading').style.display = 'none';
     }
 
-    // 3. 原有的日曆初始化與功能邏輯
     function toggleAnnounce() { document.getElementById('announcementSide').classList.toggle('collapsed'); }
 
     function generateTimeOptions() {
@@ -244,7 +239,7 @@
                 .filter(e => !e.extendedProps.status.includes("取消"))
                 .map(e => ({
                   ...e,
-                  id: 'id_' + Math.random().toString(36).substr(2, 9), // 給予臨時ID方便列表查找
+                  id: 'id_' + Math.random().toString(36).substr(2, 9),
                   title: `${e.title}\n${e.extendedProps.name}\n${e.extendedProps.status || '等待審核'}`,
                   backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
                   borderColor: 'transparent'
@@ -297,7 +292,6 @@
       }
     }
 
-    // 儲存與取消邏輯（維持你原本的邏輯）
     document.getElementById('saveBtn').onclick = async function() {
       const name = document.getElementById('userName').value;
       const purpose = document.getElementById('userPurpose').value;
@@ -312,7 +306,7 @@
       fetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'save', data: { name, purpose, phone, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00`, ip: userIp } })
-      }).then(() => { showToast("✅ 預約已送出"); setTimeout(() => location.reload(), 1500); });
+      }).then(res => res.json()).then(r => { showToast(r.msg || "✅ 預約已送出"); setTimeout(() => location.reload(), 1500); });
     };
 
     document.getElementById('cancelBtn').onclick = () => document.getElementById('verifyModal').classList.add('active');
