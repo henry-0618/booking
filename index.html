@@ -171,11 +171,19 @@
       }
     }
 
-    // 更新：修正後的 5 行清單模式
+    // 2. 生成清單視圖
     function renderListView() {
       const container = document.getElementById('listContainer');
       const events = calendar.getEvents();
-      const sortedEvents = events.sort((a, b) => b.start - a.start);
+      
+      // --- 修改排序邏輯開始 ---
+      // 依照「登記時間 (regTime)」排序 (由新到舊：近 -> 遠)
+      const sortedEvents = events.sort((a, b) => {
+        const timeA = new Date(a.extendedProps.regTime).getTime() || 0;
+        const timeB = new Date(b.extendedProps.regTime).getTime() || 0;
+        return timeB - timeA; // B 減 A 是由新到舊；若要由舊到新則改為 timeA - timeB
+      });
+      // --- 修改排序邏輯結束 ---
 
       if (sortedEvents.length === 0) {
         container.innerHTML = "<p style='text-align:center;'>目前尚無預約資料</p>";
@@ -187,23 +195,18 @@
         const status = p.status || "等待審核";
         const statusClass = status === "核准使用" ? "status-approved" : "status-pending";
         
-        // 格式化借用時間 (第 3 行)
         const startStr = event.start.toLocaleString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
         const endStr = event.end.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12:false });
 
         return `
           <div class="list-card" onclick="openBookingModal('detail', calendar.getEventById('${event.id}'))">
             <div class="line-1">${event.title.split('\n')[0]}</div>
-            
             <div class="line-2">
               <span class="badge ${statusClass}">${status}</span>
               <span class="badge badge-user">${p.name}</span>
             </div>
-
             <div class="line-3">📅 借用時間：${startStr} ~ ${endStr}</div>
-
             <div class="line-4">📝 登記時間：${p.regTime || '無資料'}</div>
-
             <div class="line-5">🆔 登記編號：${p.regId || '無編號'}</div>
           </div>
         `;
