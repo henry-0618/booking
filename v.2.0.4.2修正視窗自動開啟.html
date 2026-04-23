@@ -26,19 +26,18 @@
     .tab-btn { padding: 10px 25px; border-radius: 20px; border: 1px solid #475569; background: #1e293b; color: #94a3b8; cursor: pointer; transition: 0.3s; font-weight: bold; }
     .tab-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
 
-    /* 清單模式修正 (5行格式樣式) */
+    /* 清單模式 (5行格式樣式) */
     #listView { display: none; max-width: 800px; margin: 0 auto; }
     .list-card { 
       background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
       border-left: 6px solid #3b82f6; cursor: pointer; transition: 0.2s;
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      display: flex; flex-direction: column; gap: 8px; /* 強制垂直排列 */
+      display: flex; flex-direction: column; gap: 8px;
     }
     .list-card:hover { transform: translateX(5px); background: #2d3a4f; }
     
-    /* 5行對應樣式 */
-    .line-1 { font-size: 1.3rem; font-weight: bold; color: #fcd34d; } /* 使用目的 */
-    .line-2 { display: flex; gap: 8px; align-items: center; } /* 狀態與使用人 */
+    .line-1 { font-size: 1.3rem; font-weight: bold; color: #fcd34d; } 
+    .line-2 { display: flex; gap: 8px; align-items: center; } 
     .line-3, .line-4, .line-5 { color: #94a3b8; font-size: 0.95rem; }
 
     .badge { padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: white; }
@@ -46,7 +45,7 @@
     .status-pending { background-color: #f59e0b; }  
     .badge-user { background-color: #3b82f6; color: white; } 
 
-    /* 公告欄與彈窗（保留原本樣式） */
+    /* 公告欄 (移除預設 collapsed) */
     #announcementSide { position: fixed; right: 0px; top: 60px; width: 340px; background: #1e293b; border-left: 4px solid #f59e0b; padding: 0; transition: 0.4s; z-index: 1002; box-shadow: -5px 0 20px rgba(0,0,0,0.6); border-radius: 8px 0 0 8px; }
     #announcementSide.collapsed { right: -340px; }
     #announcementTab { position: absolute; left: -45px; top: 20px; width: 45px; background: #f59e0b; color: #000; padding: 15px 5px; cursor: pointer; border-radius: 10px 0 0 10px; font-weight: bold; text-align: center; }
@@ -75,7 +74,7 @@
 
   <div id="toast"></div>
 
-  <div id="announcementSide" class="collapsed">
+  <div id="announcementSide">
     <div id="announcementTab" onclick="toggleAnnounce()">📢 公告與提醒</div>
     <div class="announce-content">
       <div class="announce-header">📢 預約須知與公告</div>
@@ -171,19 +170,16 @@
       }
     }
 
-    // 2. 生成清單視圖
     function renderListView() {
       const container = document.getElementById('listContainer');
       const events = calendar.getEvents();
       
-      // --- 修改排序邏輯開始 ---
       // 依照「登記時間 (regTime)」排序 (由新到舊：近 -> 遠)
       const sortedEvents = events.sort((a, b) => {
         const timeA = new Date(a.extendedProps.regTime).getTime() || 0;
         const timeB = new Date(b.extendedProps.regTime).getTime() || 0;
-        return timeB - timeA; // B 減 A 是由新到舊；若要由舊到新則改為 timeA - timeB
+        return timeB - timeA;
       });
-      // --- 修改排序邏輯結束 ---
 
       if (sortedEvents.length === 0) {
         container.innerHTML = "<p style='text-align:center;'>目前尚無預約資料</p>";
