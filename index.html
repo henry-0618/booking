@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Henry Space 練團室預約系統</title>
-  <b>點擊空白處開始預約，點擊已有預約可查看詳情或取消</b>
+  <title>Henry Space 場地預約系統</title>
   <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
   <style>
@@ -23,7 +22,7 @@
     .fc-event-title { white-space: pre-wrap !important; font-size: 0.85rem !important; line-height: 1.4 !important; display: block !important; }
 
     /* 頁籤切換按鈕 */
-    .view-switcher { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
+    .view-switcher { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
     .tab-btn { padding: 10px 25px; border-radius: 20px; border: 1px solid #475569; background: #1e293b; color: #94a3b8; cursor: pointer; transition: 0.3s; font-weight: bold; }
     .tab-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
 
@@ -46,7 +45,7 @@
     .status-pending { background-color: #f59e0b; }  
     .badge-user { background-color: #3b82f6; color: white; } 
 
-    /* 公告欄 (移除預設 collapsed) */
+    /* 公告欄 */
     #announcementSide { position: fixed; right: 0px; top: 60px; width: 340px; background: #1e293b; border-left: 4px solid #f59e0b; padding: 0; transition: 0.4s; z-index: 1002; box-shadow: -5px 0 20px rgba(0,0,0,0.6); border-radius: 8px 0 0 8px; }
     #announcementSide.collapsed { right: -340px; }
     #announcementTab { position: absolute; left: -45px; top: 20px; width: 45px; background: #f59e0b; color: #000; padding: 15px 5px; cursor: pointer; border-radius: 10px 0 0 10px; font-weight: bold; text-align: center; }
@@ -81,7 +80,7 @@
       <div class="announce-header">📢 預約須知與公告</div>
       <div class="notice-box">
         <b>【通知】</b> 取消時若驗證失敗請嘗試將電話開頭0去除<br><br>
-        <b>【2026/04/03公告】</b>本網站於7/1將進行維護升級，該時段網頁不開放，如欲預約7/1後場地請參閱此公告<br><br>
+        <b>【2026/04/03公告】</b> 本網站於4/3起改版，並優化版面及新增取消預約功能。<br><br>
         <b>【2026/02/10公告】</b>系統顯示不開放時段，請以「紙本」申請表申請。<br>
         🔗 <a href="https://reurl.cc/dq69W8" target="_blank" style="color: #fcd34d;">紙本申請表連結</a>
       </div>
@@ -90,7 +89,6 @@
         <li>使用前20分鐘憑借用人識別證到資工組領取門禁卡</li>
         <li>使用後請務必將設備&器材歸位</li>
         <li>有任何問題請聯絡資工組 分機#7032 官方LINE <a href="https://lin.ee/TY5Xf1q" target="_blank">@008fwobe</a></li>
-        <li>預約系統受API限制載入較慢，開啟後等待10秒再動作</li>
         <li>限預約30天內，預約超過30天時間視無效</li>
         <li>預約須等待場地管理員審核顯示核准使用 使得使用</li>
       </div>
@@ -98,7 +96,15 @@
     </div>
   </div>
 
-  <h2 style="text-align: center; margin-top: 20px;">🎸 Henry Space 練團室預約系統</h2>
+  <h2 style="text-align: center; margin-top: 20px;">🎸 Henry Space 場地預約系統</h2>
+  <div style="text-align: center; color: #94a3b8; font-size: 14px; margin-bottom: 15px;">點擊空白處開始預約，點擊已有預約可查看詳情或取消</div>
+
+  <div style="text-align: center; margin-bottom: 15px;">
+    <span style="color: #fcd34d; font-weight: bold; margin-right: 10px;">🔍 選擇檢視場地：</span>
+    <select id="venueFilter" class="input-field" style="width: 250px; display: inline-block; padding: 8px;" onchange="changeVenueFilter()">
+      <option value="ALL">顯示全部場地</option>
+      </select>
+  </div>
 
   <div class="view-switcher">
     <button id="calTab" class="tab-btn active" onclick="switchView('calendar')">📅 日曆模式</button>
@@ -116,23 +122,32 @@
 
   <div class="modal" id="bookingModal">
     <h3 id="modalTitle">預約資訊</h3>
+    
+    <div style="font-size: 14px; color: #94a3b8;">借用場地：</div>
+    <select id="bookingVenue" class="input-field"></select>
+
     <div style="font-size: 14px; color: #94a3b8;">預約人姓名：</div>
     <input type="text" id="userName" class="input-field">
+    
     <div style="font-size: 14px; color: #94a3b8;">使用目的：</div>
     <input type="text" id="userPurpose" class="input-field">
+    
     <div id="phoneInputArea">
       <div style="font-size: 14px; color: #94a3b8;">聯絡電話：</div>
       <input type="tel" id="userPhone" class="input-field">
     </div>
+    
     <div style="font-size: 14px; color: #94a3b8; margin-top:10px;">預約時段：</div>
     <div style="display:flex; gap:5px;">
         <select id="startTime" class="input-field"></select>
         <select id="endTime" class="input-field"></select>
     </div>
+    
     <div id="statusArea" style="display:none;">
       <div style="font-size: 14px; color: #94a3b8;">審核狀態：</div>
       <div id="statusText" class="status-badge"></div>
     </div>
+    
     <div class="btn-group">
       <button class="btn btn-close" onclick="closeAllModals()">返回</button>
       <button class="btn btn-danger" id="cancelBtn" style="display:none">取消預約</button>
@@ -152,7 +167,49 @@
 
   <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdOhbuzGQo54tcgo-hQ7LgTHDFC5T_xJGFx1RPHdH_OuOmKG89Gu0tDWGbycOVkxx5HA/exec';
+    
+    // 定義所有場地
+    const VENUES = ['練團室', '101', '102', '103', '104', '105', '106', '2F視聽室', '201', '202', '203', '204', '205', '301', '302', '303', '304', '305', '306', '307', '308', '309', '310', '國際會議室', '培育教室(一)', '培育教室(二)'];
+    
     let calendar, currentEvent;
+    let allFetchedEvents = null; // 用來快取資料，加速篩選
+
+    // 產生場地選單
+    function initVenues() {
+      const filter = document.getElementById('venueFilter');
+      const bookingVenue = document.getElementById('bookingVenue');
+      VENUES.forEach(v => {
+        filter.innerHTML += `<option value="${v}">${v}</option>`;
+        bookingVenue.innerHTML += `<option value="${v}">${v}</option>`;
+      });
+    }
+
+    // 切換場地時觸發
+    function changeVenueFilter() {
+      if(calendar) calendar.refetchEvents();
+      if(document.getElementById('listTab').classList.contains('active')) {
+        setTimeout(renderListView, 50); // 確保資料重新篩選後再渲染清單
+      }
+    }
+
+    // 過濾與處理資料格式
+    function processEvents(data) {
+      const filterVal = document.getElementById('venueFilter').value;
+      return data
+        .filter(e => !e.extendedProps.status.includes("取消"))
+        .filter(e => filterVal === 'ALL' || (e.extendedProps.venue || '練團室') === filterVal)
+        .map(e => {
+          const v = e.extendedProps.venue || '練團室';
+          return {
+            ...e,
+            id: 'id_' + Math.random().toString(36).substr(2, 9),
+            // 將場地名稱加在 title 最前方，方便清單與日曆顯示
+            title: `[${v}] ${e.title}\n${e.extendedProps.name}\n${e.extendedProps.status || '等待審核'}`,
+            backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
+            borderColor: 'transparent'
+          };
+        });
+    }
 
     function switchView(view) {
       const calEl = document.getElementById('calendar');
@@ -175,7 +232,6 @@
       const container = document.getElementById('listContainer');
       const events = calendar.getEvents();
       
-      // 依照「登記時間 (regTime)」排序 (由新到舊：近 -> 遠)
       const sortedEvents = events.sort((a, b) => {
         const timeA = new Date(a.extendedProps.regTime).getTime() || 0;
         const timeB = new Date(b.extendedProps.regTime).getTime() || 0;
@@ -197,7 +253,7 @@
 
         return `
           <div class="list-card" onclick="openBookingModal('detail', calendar.getEventById('${event.id}'))">
-            <div class="line-1">${event.title.split('\n')[0]}</div>
+            <div class="line-1">📍 ${event.title.split('\n')[0]}</div>
             <div class="line-2">
               <span class="badge ${statusClass}">${status}</span>
               <span class="badge badge-user">${p.name}</span>
@@ -227,6 +283,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+      initVenues();
       generateTimeOptions();
       var calendarEl = document.getElementById('calendar');
       calendar = new FullCalendar.Calendar(calendarEl, {
@@ -238,19 +295,16 @@
         slotMaxTime: '23:30:00',
         headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
         events: function(info, successCallback, failureCallback) {
+          // 利用快取，避免切換場地時重新從 GAS 載入
+          if (allFetchedEvents !== null) {
+            successCallback(processEvents(allFetchedEvents));
+            return;
+          }
           fetch(GAS_URL)
             .then(res => res.json())
             .then(data => {
-              const activeEvents = data
-                .filter(e => !e.extendedProps.status.includes("取消"))
-                .map(e => ({
-                  ...e,
-                  id: 'id_' + Math.random().toString(36).substr(2, 9),
-                  title: `${e.title}\n${e.extendedProps.name}\n${e.extendedProps.status || '等待審核'}`,
-                  backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
-                  borderColor: 'transparent'
-                }));
-              successCallback(activeEvents);
+              allFetchedEvents = data; // 存入快取
+              successCallback(processEvents(allFetchedEvents));
             })
             .catch(err => failureCallback(err));
         },
@@ -269,7 +323,7 @@
       currentEvent = info;
       document.getElementById('overlay').classList.add('active');
       document.getElementById('bookingModal').classList.add('active');
-      const fields = ['userName', 'userPurpose', 'userPhone', 'startTime', 'endTime'];
+      const fields = ['bookingVenue', 'userName', 'userPurpose', 'userPhone', 'startTime', 'endTime'];
 
       if(type === 'new') {
         document.getElementById('modalTitle').innerText = "建立預約";
@@ -278,6 +332,11 @@
         document.getElementById('statusArea').style.display = "none";
         document.getElementById('phoneInputArea').style.display = "block";
         fields.forEach(id => { const el = document.getElementById(id); el.value = ""; el.disabled = false; });
+        
+        // 預設選中當下篩選的場地，如果是看全部，就預設第一項
+        const currentFilter = document.getElementById('venueFilter').value;
+        document.getElementById('bookingVenue').value = currentFilter !== 'ALL' ? currentFilter : VENUES[0];
+
         document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
         document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
       } else {
@@ -287,10 +346,13 @@
         document.getElementById('statusArea').style.display = "block";
         document.getElementById('phoneInputArea').style.display = "none";
         fields.forEach(id => document.getElementById(id).disabled = true);
+        
+        document.getElementById('bookingVenue').value = info.extendedProps.venue || '練團室';
         document.getElementById('userName').value = info.extendedProps.name;
-        document.getElementById('userPurpose').value = info.title.split('\n')[0];
+        document.getElementById('userPurpose').value = info.title.split('\n')[0].replace(/\[.*?\]\s*/, ''); // 移除前方的 [場地] 標籤
         document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
         document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
+        
         const status = info.extendedProps.status || "等待審核";
         const st = document.getElementById('statusText');
         st.innerText = status;
@@ -299,6 +361,7 @@
     }
 
     document.getElementById('saveBtn').onclick = async function() {
+      const venue = document.getElementById('bookingVenue').value;
       const name = document.getElementById('userName').value;
       const purpose = document.getElementById('userPurpose').value;
       const phone = document.getElementById('userPhone').value;
@@ -311,7 +374,7 @@
       const dateStr = currentEvent.startStr.split('T')[0];
       fetch(GAS_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'save', data: { name, purpose, phone, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00`, ip: userIp } })
+        body: JSON.stringify({ action: 'save', data: { venue, name, purpose, phone, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00`, ip: userIp } })
       }).then(res => res.json()).then(r => { showToast(r.msg || "✅ 預約已送出"); setTimeout(() => location.reload(), 1500); });
     };
 
@@ -323,7 +386,7 @@
       this.innerText = "處理中...";
       fetch(GAS_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'delete', data: { name: currentEvent.extendedProps.name, start: currentEvent.startStr, phone: phone } })
+        body: JSON.stringify({ action: 'delete', data: { venue: currentEvent.extendedProps.venue || '練團室', name: currentEvent.extendedProps.name, start: currentEvent.startStr, phone: phone } })
       }).then(res => res.json()).then(res => {
         if(res.success) { showToast("🗑️ 預約已成功取消"); setTimeout(() => location.reload(), 1500); }
         else { showToast("❌ " + res.msg, true); this.innerText = "確定取消預約"; }
