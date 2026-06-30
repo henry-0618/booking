@@ -103,7 +103,7 @@
     <span style="color: #fcd34d; font-weight: bold; margin-right: 10px;">🔍 選擇檢視場地：</span>
     <select id="venueFilter" class="input-field" style="width: 250px; display: inline-block; padding: 8px;" onchange="changeVenueFilter()">
       <option value="ALL">顯示全部場地</option>
-      </select>
+    </select>
   </div>
 
   <div class="view-switcher">
@@ -135,6 +135,11 @@
     <div id="phoneInputArea">
       <div style="font-size: 14px; color: #94a3b8;">聯絡電話：</div>
       <input type="tel" id="userPhone" class="input-field">
+    </div>
+
+    <div id="emailInputArea">
+      <div style="font-size: 14px; color: #94a3b8;">電子郵件 (用於接收即時通知通知)：</div>
+      <input type="email" id="userEmail" class="input-field" placeholder="example@gmail.com">
     </div>
     
     <div style="font-size: 14px; color: #94a3b8; margin-top:10px;">預約時段：</div>
@@ -168,13 +173,11 @@
   <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdOhbuzGQo54tcgo-hQ7LgTHDFC5T_xJGFx1RPHdH_OuOmKG89Gu0tDWGbycOVkxx5HA/exec';
     
-    // 定義所有場地
     const VENUES = ['練團室', '101', '102', '103', '104', '105', '106', '2F視聽室', '201', '202', '203', '204', '205', '301', '302', '303', '304', '305', '306', '307', '308', '309', '310', '國際會議室', '培育教室(一)', '培育教室(二)'];
     
     let calendar, currentEvent;
-    let allFetchedEvents = null; // 用來快取資料，加速篩選
+    let allFetchedEvents = null;
 
-    // 產生場地選單
     function initVenues() {
       const filter = document.getElementById('venueFilter');
       const bookingVenue = document.getElementById('bookingVenue');
@@ -184,15 +187,13 @@
       });
     }
 
-    // 切換場地時觸發
     function changeVenueFilter() {
       if(calendar) calendar.refetchEvents();
       if(document.getElementById('listTab').classList.contains('active')) {
-        setTimeout(renderListView, 50); // 確保資料重新篩選後再渲染清單
+        setTimeout(renderListView, 50);
       }
     }
 
-    // 過濾與處理資料格式
     function processEvents(data) {
       const filterVal = document.getElementById('venueFilter').value;
       return data
@@ -203,7 +204,6 @@
           return {
             ...e,
             id: 'id_' + Math.random().toString(36).substr(2, 9),
-            // 將場地名稱加在 title 最前方，方便清單與日曆顯示
             title: `[${v}] ${e.title}\n${e.extendedProps.name}\n${e.extendedProps.status || '等待審核'}`,
             backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
             borderColor: 'transparent'
@@ -259,8 +259,8 @@
               <span class="badge badge-user">${p.name}</span>
             </div>
             <div class="line-3">📅 借用時間：${startStr} ~ ${endStr}</div>
-            <div class="line-4">📝 登記時間：${p.regTime || '無資料'}</div>
-            <div class="line-5">🆔 登記編號：${p.regId || '無編號'}</div>
+            <div class="line-4">📝 登記日期：${p.regTime || '無資料'}</div>
+            <div class="line-5">🆔 預約編號：${p.regId || '無編號'}</div>
           </div>
         `;
       }).join('');
@@ -295,7 +295,6 @@
         slotMaxTime: '23:30:00',
         headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
         events: function(info, successCallback, failureCallback) {
-          // 利用快取，避免切換場地時重新從 GAS 載入
           if (allFetchedEvents !== null) {
             successCallback(processEvents(allFetchedEvents));
             return;
@@ -303,7 +302,7 @@
           fetch(GAS_URL)
             .then(res => res.json())
             .then(data => {
-              allFetchedEvents = data; // 存入快取
+              allFetchedEvents = data;
               successCallback(processEvents(allFetchedEvents));
             })
             .catch(err => failureCallback(err));
@@ -323,17 +322,21 @@
       currentEvent = info;
       document.getElementById('overlay').classList.add('active');
       document.getElementById('bookingModal').classList.add('active');
-      const fields = ['bookingVenue', 'userName', 'userPurpose', 'userPhone', 'startTime', 'endTime'];
+      
+      // 將新增的 userEmail 納入欄位陣列控制
+      const fields = ['bookingVenue', 'userName', 'userPurpose', 'userPhone', 'userEmail', 'startTime', 'endTime'];
 
       if(type === 'new') {
         document.getElementById('modalTitle').innerText = "建立預約";
         document.getElementById('saveBtn').style.display = "block";
         document.getElementById('cancelBtn').style.display = "none";
         document.getElementById('statusArea').style.display = "none";
+        
+        // 新增時，顯示電話與 Email 輸入欄位
         document.getElementById('phoneInputArea').style.display = "block";
+        document.getElementById('emailInputArea').style.display = "block";
         fields.forEach(id => { const el = document.getElementById(id); el.value = ""; el.disabled = false; });
         
-        // 預設選中當下篩選的場地，如果是看全部，就預設第一項
         const currentFilter = document.getElementById('venueFilter').value;
         document.getElementById('bookingVenue').value = currentFilter !== 'ALL' ? currentFilter : VENUES[0];
 
@@ -344,12 +347,15 @@
         document.getElementById('saveBtn').style.display = "none";
         document.getElementById('cancelBtn').style.display = "block";
         document.getElementById('statusArea').style.display = "block";
+        
+        // 查看詳情時隱藏隱私資料 (電話、Email)
         document.getElementById('phoneInputArea').style.display = "none";
+        document.getElementById('emailInputArea').style.display = "none";
         fields.forEach(id => document.getElementById(id).disabled = true);
         
         document.getElementById('bookingVenue').value = info.extendedProps.venue || '練團室';
         document.getElementById('userName').value = info.extendedProps.name;
-        document.getElementById('userPurpose').value = info.title.split('\n')[0].replace(/\[.*?\]\s*/, ''); // 移除前方的 [場地] 標籤
+        document.getElementById('userPurpose').value = info.title.split('\n')[0].replace(/\[.*?\]\s*/, '');
         document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
         document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
         
@@ -365,16 +371,26 @@
       const name = document.getElementById('userName').value;
       const purpose = document.getElementById('userPurpose').value;
       const phone = document.getElementById('userPhone').value;
+      const email = document.getElementById('userEmail').value; // 抓取 Email
       const startT = document.getElementById('startTime').value;
       const endT = document.getElementById('endTime').value;
-      if(!name || !purpose || !phone) { showToast("❌ 請填寫完整資料", true); return; }
+      
+      // 新增欄位驗證
+      if(!name || !purpose || !phone || !email) { showToast("❌ 請填寫完整資料 (含電子郵件)", true); return; }
+      if(!email.includes('@')) { showToast("❌ 電子郵件格式有誤", true); return; }
+      
       this.innerText = "傳送中..."; this.disabled = true;
       let userIp = "Unknown";
       try { const ipRes = await fetch('https://api.ipify.org?format=json'); const ipData = await ipRes.json(); userIp = ipData.ip; } catch (e) {}
       const dateStr = currentEvent.startStr.split('T')[0];
+      
+      // 將 email 包入 JSON data 中同步回傳給後端 GAS
       fetch(GAS_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'save', data: { venue, name, purpose, phone, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00`, ip: userIp } })
+        body: JSON.stringify({ 
+          action: 'save', 
+          data: { venue, name, purpose, phone, email, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00`, ip: userIp } 
+        })
       }).then(res => res.json()).then(r => { showToast(r.msg || "✅ 預約已送出"); setTimeout(() => location.reload(), 1500); });
     };
 
