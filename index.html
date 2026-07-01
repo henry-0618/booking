@@ -1,341 +1,406 @@
-/**
- * Henry Space 預約系統
- * 支援：
- * 1. 多場地
- * 2. Email通知
- * 3. 審核通知
- * 4. 時段衝突檢查
- * 5. 取消/駁回不顯示於日曆
- */
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Henry Space 場地預約系統</title>
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+  <style>
+    body { font-family: "Microsoft JhengHei", sans-serif; background-color: #0f172a; color: #f1f5f9; margin: 0; padding: 10px; }
 
-const SPREADSHEET_ID = "1xY9icsucXNVvyVxYUspIkqv8yvwpYrT_9MVTdXqeROo";
+    /* 日曆容器 */
+    #calendar { 
+      max-width: 1100px; 
+      margin: 0 auto 20px; 
+      background: #1e293b; 
+      padding: 15px; 
+      border-radius: 12px; 
+      border: 2px solid #ffffff; 
+    }
+    .fc { --fc-border-color: #4b5563; }
+    .fc-event-title { white-space: pre-wrap !important; font-size: 0.85rem !important; line-height: 1.4 !important; display: block !important; }
 
-function doGet() {
-  try {
-    return ContentService
-      .createTextOutput(JSON.stringify(getStoredEvents()))
-      .setMimeType(ContentService.MimeType.JSON);
+    /* 頁籤切換按鈕 */
+    .view-switcher { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
+    .tab-btn { padding: 10px 25px; border-radius: 20px; border: 1px solid #475569; background: #1e293b; color: #94a3b8; cursor: pointer; transition: 0.3s; font-weight: bold; }
+    .tab-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
 
-  } catch (err) {
+    /* 清單模式 (5行格式樣式) */
+    #listView { display: none; max-width: 800px; margin: 0 auto; }
+    .list-card { 
+      background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
+      border-left: 6px solid #3b82f6; cursor: pointer; transition: 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .list-card:hover { transform: translateX(5px); background: #2d3a4f; }
 
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        error: err.toString()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+    .line-1 { font-size: 1.3rem; font-weight: bold; color: #fcd34d; } 
+    .line-2 { display: flex; gap: 8px; align-items: center; } 
+    .line-3, .line-4, .line-5 { color: #94a3b8; font-size: 0.95rem; }
 
-  }
-}
+    .badge { padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: white; }
+    .status-approved { background-color: #10b981; } 
+    .status-pending { background-color: #f59e0b; }  
+    .badge-user { background-color: #3b82f6; color: white; } 
 
-function doPost(e) {
+    /* 公告欄 */
+    #announcementSide { position: fixed; right: 0px; top: 60px; width: 340px; background: #1e293b; border-left: 4px solid #f59e0b; padding: 0; transition: 0.4s; z-index: 1002; box-shadow: -5px 0 20px rgba(0,0,0,0.6); border-radius: 8px 0 0 8px; }
+    #announcementSide.collapsed { right: -340px; }
+    #announcementTab { position: absolute; left: -45px; top: 20px; width: 45px; background: #f59e0b; color: #000; padding: 15px 5px; cursor: pointer; border-radius: 10px 0 0 10px; font-weight: bold; text-align: center; }
+    .announce-content { padding: 20px; max-height: 80vh; overflow-y: auto; }
+    .announce-header { color: #fcd34d; border-bottom: 1px solid #475569; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.1rem; }
+    .notice-box { background: #451a03; border: 1px solid #d97706; color: #fef3c7; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 15px; }
 
-  const request = JSON.parse(e.postData.contents);
+    .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e293b; padding: 25px; border-radius: 16px; border: 1px solid #475569; z-index: 1000; width: 90%; max-width: 450px; color: white; }
+    .modal.active { display: block; }
+    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; }
+    .overlay.active { display: block; }
 
-  let result = {
-    success:false
-  };
+    #toast { position: fixed; top: 20px; right: -400px; background: #10b981; color: white; padding: 15px 30px; border-radius: 8px; transition: 0.5s; z-index: 2000; font-weight: bold; }
+    #toast.show { right: 20px; }
 
-  if (request.action === "save") {
-    result = saveBooking(request.data);
-  }
+    .input-field { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; font-size: 1rem; }
+    .status-badge { display: inline-block; padding: 8px 20px; border-radius: 6px; font-size: 1.2rem; font-weight: bold; margin: 15px 0; width: 100%; text-align: center; box-sizing: border-box; }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-close { background: #475569; color: white; }
+  </style>
+</head>
+<body>
 
-  if (request.action === "delete") {
-    result = deleteBooking(request.data);
-  }
+  <div id="toast"></div>
 
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+  <div id="announcementSide">
+    <div id="announcementTab" onclick="toggleAnnounce()">📢 公告與提醒</div>
+    <div class="announce-content">
+      <div class="announce-header">📢 預約須知與公告</div>
+      <div class="notice-box">
+        <b>【通知】</b> 取消時若驗證失敗請嘗試將電話開頭0去除<br><br>
+        <b>【2026/04/03公告】</b> 本網站於4/3起改版，並優化版面及新增取消預約功能。<br><br>
+        <b>【2026/02/10公告】</b>系統顯示不開放時段，請以「紙本」申請表申請。<br>
+        🔗 <a href="https://reurl.cc/dq69W8" target="_blank" style="color: #fcd34d;">紙本申請表連結</a>
+        <b>【2026/07/01公告】</b> 本系統已更新，即日起所有場地皆可於本系統預約<br><br>
+        <b>【2026/07/01公告】</b>目前e-mail自動通知異常中，預約後可能收不到通知，請自行到系統查詢狀態，造成不便敬請見諒<br>
+        
+      </div>
+      <div style="font-size: 0.9rem; color: #94a3b8; line-height: 1.8;">
+        <li>預約資料請填寫正確使用目的、電話、姓名</li>
+        <li>使用前20分鐘憑借用人識別證到資工組領取門禁卡</li>
+        <li>使用後請務必將設備&器材歸位</li>
+        <li>有任何問題請聯絡資工組 分機#7032 官方LINE <a href="https://lin.ee/TY5Xf1q" target="_blank">@008fwobe</a></li>
+        <li>限預約30天內，預約超過30天時間視無效</li>
+        <li>預約須等待場地管理員審核顯示核准使用 使得使用</li>
+      </div>
+      <button class="btn btn-close" style="width:100%; margin-top:20px;" onclick="toggleAnnounce()">關閉</button>
+    </div>
+  </div>
 
-/* ===========================
-   讀取資料
-=========================== */
+  <h2 style="text-align: center; margin-top: 20px;">🎸 Henry Space 場地預約系統</h2>
+  <div style="text-align: center; color: #94a3b8; font-size: 14px; margin-bottom: 15px;">點擊空白處開始預約，點擊已有預約可查看詳情或取消</div>
 
-function getStoredEvents() {
+  <div style="text-align: center; margin-bottom: 15px;">
+    <span style="color: #fcd34d; font-weight: bold; margin-right: 10px;">🔍 選擇檢視場地：</span>
+    <select id="venueFilter" class="input-field" style="width: 250px; display: inline-block; padding: 8px;" onchange="changeVenueFilter()">
+      <option value="ALL">顯示全部場地</option>
+      </select>
+  </div>
 
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName("工作表1");
+  <div class="view-switcher">
+    <button id="calTab" class="tab-btn active" onclick="switchView('calendar')">📅 日曆模式</button>
+    <button id="listTab" class="tab-btn" onclick="switchView('list')">📋 查詢預約資料清單</button>
+  </div>
 
-  const data = sheet.getDataRange().getValues();
+  <div id='calendar'></div>
 
-  const events = [];
+  <div id="listView">
+    <div id="loading" style="text-align:center; padding:20px;">資料讀取中...</div>
+    <div id="listContainer"></div>
+  </div>
 
-  for(let i=1;i<data.length;i++){
+  <div class="overlay" id="overlay" onclick="closeAllModals()"></div>
 
-    if(!data[i][0]) continue;
+  <div class="modal" id="bookingModal">
+    <h3 id="modalTitle">預約資訊</h3>
 
-    const status = data[i][5] || "等待審核";
+    <div style="font-size: 14px; color: #94a3b8;">借用場地：</div>
+    <select id="bookingVenue" class="input-field"></select>
 
-    if(status === "已自行取消") continue;
-    if(status === "駁回申請") continue;
+    <div style="font-size: 14px; color: #94a3b8;">預約人姓名：</div>
+    <input type="text" id="userName" class="input-field">
 
-    events.push({
+    <div style="font-size: 14px; color: #94a3b8;">使用目的：</div>
+    <input type="text" id="userPurpose" class="input-field">
 
-      title:data[i][3] || "未填寫目的",
+    <div id="phoneInputArea">
+      <div style="font-size: 14px; color: #94a3b8;">聯絡電話：</div>
+      <input type="tel" id="userPhone" class="input-field">
+    </div>
 
-      start:data[i][1],
+    <div style="font-size: 14px; color: #94a3b8; margin-top:10px;">預約時段：</div>
+    <div style="display:flex; gap:5px;">
+        <select id="startTime" class="input-field"></select>
+        <select id="endTime" class="input-field"></select>
+    </div>
 
-      end:data[i][2],
+    <div id="statusArea" style="display:none;">
+      <div style="font-size: 14px; color: #94a3b8;">審核狀態：</div>
+      <div id="statusText" class="status-badge"></div>
+    </div>
 
-      extendedProps:{
-        name:data[i][0],
-        phone:data[i][4],
-        status:status,
-        regTime:data[i][7]
-          ? Utilities.formatDate(
-              new Date(data[i][7]),
-              "GMT+8",
-              "yyyy/MM/dd HH:mm:ss"
-            )
-          : "無資料",
-        regId:data[i][8] || "",
-        venue:data[i][9] || "練團室",
-        email:data[i][10] || ""
+    <div class="btn-group">
+      <button class="btn btn-close" onclick="closeAllModals()">返回</button>
+      <button class="btn btn-danger" id="cancelBtn" style="display:none">取消預約</button>
+      <button class="btn btn-primary" id="saveBtn">確認送出</button>
+    </div>
+  </div>
+
+  <div class="modal" id="verifyModal" style="z-index:1001">
+    <h3>驗證取消</h3>
+    <p>請輸入預約時的電話以核對身分：</p>
+    <input type="tel" id="verifyPhone" class="input-field" placeholder="請輸入電話">
+    <div class="btn-group">
+      <button class="btn btn-close" onclick="document.getElementById('verifyModal').classList.remove('active')">返回</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">確定取消預約</button>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdOhbuzGQo54tcgo-hQ7LgTHDFC5T_xJGFx1RPHdH_OuOmKG89Gu0tDWGbycOVkxx5HA/exec';
+
+    // 定義所有場地
+    const VENUES = ['練團室', '101', '102', '103', '104', '105', '106', '2F視聽室', '201', '202', '203', '204', '205', '301', '302', '303', '304', '305', '306', '307', '308', '309', '310', '國際會議室', '培育教室(一)', '培育教室(二)'];
+
+    let calendar, currentEvent;
+    let allFetchedEvents = null; // 用來快取資料，加速篩選
+
+    // 產生場地選單
+    function initVenues() {
+      const filter = document.getElementById('venueFilter');
+      const bookingVenue = document.getElementById('bookingVenue');
+      VENUES.forEach(v => {
+        filter.innerHTML += `<option value="${v}">${v}</option>`;
+        bookingVenue.innerHTML += `<option value="${v}">${v}</option>`;
+      });
+    }
+
+    // 切換場地時觸發
+    function changeVenueFilter() {
+      if(calendar) calendar.refetchEvents();
+      if(document.getElementById('listTab').classList.contains('active')) {
+        setTimeout(renderListView, 50); // 確保資料重新篩選後再渲染清單
+      }
+    }
+
+    // 過濾與處理資料格式
+    function processEvents(data) {
+      const filterVal = document.getElementById('venueFilter').value;
+      return data
+        .filter(e => !e.extendedProps.status.includes("取消"))
+        .filter(e => filterVal === 'ALL' || (e.extendedProps.venue || '練團室') === filterVal)
+        .map(e => {
+          const v = e.extendedProps.venue || '練團室';
+          return {
+            ...e,
+            id: 'id_' + Math.random().toString(36).substr(2, 9),
+            // 將場地名稱加在 title 最前方，方便清單與日曆顯示
+            title: `[${v}] ${e.title}\n${e.extendedProps.name}\n${e.extendedProps.status || '等待審核'}`,
+            backgroundColor: e.extendedProps.status === "核准使用" ? "#10b981" : "#f59e0b",
+            borderColor: 'transparent'
+          };
+        });
+    }
+
+    function switchView(view) {
+      const calEl = document.getElementById('calendar');
+      const listEl = document.getElementById('listView');
+      const calTab = document.getElementById('calTab');
+      const listTab = document.getElementById('listTab');
+
+      if (view === 'calendar') {
+        calEl.style.display = 'block'; listEl.style.display = 'none';
+        calTab.classList.add('active'); listTab.classList.remove('active');
+        calendar.render();
+      } else {
+        calEl.style.display = 'none'; listEl.style.display = 'block';
+        listTab.classList.add('active'); calTab.classList.remove('active');
+        renderListView();
+      }
+    }
+
+    function renderListView() {
+      const container = document.getElementById('listContainer');
+      const events = calendar.getEvents();
+
+      const sortedEvents = events.sort((a, b) => {
+        const timeA = new Date(a.extendedProps.regTime).getTime() || 0;
+        const timeB = new Date(b.extendedProps.regTime).getTime() || 0;
+        return timeB - timeA;
+      });
+
+      if (sortedEvents.length === 0) {
+        container.innerHTML = "<p style='text-align:center;'>目前尚無預約資料</p>";
+        return;
       }
 
+      container.innerHTML = sortedEvents.map(event => {
+        const p = event.extendedProps;
+        const status = p.status || "等待審核";
+        const statusClass = status === "核准使用" ? "status-approved" : "status-pending";
+
+        const startStr = event.start.toLocaleString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
+        const endStr = event.end.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12:false });
+
+        return `
+          <div class="list-card" onclick="openBookingModal('detail', calendar.getEventById('${event.id}'))">
+            <div class="line-1">📍 ${event.title.split('\n')[0]}</div>
+            <div class="line-2">
+              <span class="badge ${statusClass}">${status}</span>
+              <span class="badge badge-user">${p.name}</span>
+            </div>
+            <div class="line-3">📅 借用時間：${startStr} ~ ${endStr}</div>
+            <div class="line-4">📝 登記時間：${p.regTime || '無資料'}</div>
+            <div class="line-5">🆔 登記編號：${p.regId || '無編號'}</div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    function toggleAnnounce() { document.getElementById('announcementSide').classList.toggle('collapsed'); }
+
+    function generateTimeOptions() {
+      const start = document.getElementById('startTime');
+      const end = document.getElementById('endTime');
+      start.innerHTML = ''; end.innerHTML = '';
+      for (let h = 8; h <= 23; h++) {
+        for (let m of ['00', '30']) {
+          const time = `${h.toString().padStart(2, '0')}:${m}`;
+          start.innerHTML += `<option value="${time}">${time}</option>`;
+          end.innerHTML += `<option value="${time}">${time}</option>`;
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initVenues();
+      generateTimeOptions();
+      var calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'zh-tw',
+        allDaySlot: false,
+        selectable: true,
+        slotMinTime: '08:00:00',
+        slotMaxTime: '23:30:00',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
+        events: function(info, successCallback, failureCallback) {
+          // 利用快取，避免切換場地時重新從 GAS 載入
+          if (allFetchedEvents !== null) {
+            successCallback(processEvents(allFetchedEvents));
+            return;
+          }
+          fetch(GAS_URL)
+            .then(res => res.json())
+            .then(data => {
+              allFetchedEvents = data; // 存入快取
+              successCallback(processEvents(allFetchedEvents));
+            })
+            .catch(err => failureCallback(err));
+        },
+        select: function(info) { openBookingModal('new', info); },
+        eventClick: function(info) { openBookingModal('detail', info.event); }
+      });
+      calendar.render();
     });
 
-  }
+    function closeAllModals() {
+      document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+      document.getElementById('overlay').classList.remove('active');
+    }
 
-  return events;
-}
+    function openBookingModal(type, info) {
+      currentEvent = info;
+      document.getElementById('overlay').classList.add('active');
+      document.getElementById('bookingModal').classList.add('active');
+      const fields = ['bookingVenue', 'userName', 'userPurpose', 'userPhone', 'startTime', 'endTime'];
 
-/* ===========================
-   建立預約
-=========================== */
+      if(type === 'new') {
+        document.getElementById('modalTitle').innerText = "建立預約";
+        document.getElementById('saveBtn').style.display = "block";
+        document.getElementById('cancelBtn').style.display = "none";
+        document.getElementById('statusArea').style.display = "none";
+        document.getElementById('phoneInputArea').style.display = "block";
+        fields.forEach(id => { const el = document.getElementById(id); el.value = ""; el.disabled = false; });
 
-function saveBooking(data){
+        // 預設選中當下篩選的場地，如果是看全部，就預設第一項
+        const currentFilter = document.getElementById('venueFilter').value;
+        document.getElementById('bookingVenue').value = currentFilter !== 'ALL' ? currentFilter : VENUES[0];
 
-  try{
+        document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
+        document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
+      } else {
+        document.getElementById('modalTitle').innerText = "預約詳細資料";
+        document.getElementById('saveBtn').style.display = "none";
+        document.getElementById('cancelBtn').style.display = "block";
+        document.getElementById('statusArea').style.display = "block";
+        document.getElementById('phoneInputArea').style.display = "none";
+        fields.forEach(id => document.getElementById(id).disabled = true);
 
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName("工作表1");
+        document.getElementById('bookingVenue').value = info.extendedProps.venue || '練團室';
+        document.getElementById('userName').value = info.extendedProps.name;
+        document.getElementById('userPurpose').value = info.title.split('\n')[0].replace(/\[.*?\]\s*/, ''); // 移除前方的 [場地] 標籤
+        document.getElementById('startTime').value = info.startStr.split('T')[1].substring(0,5);
+        document.getElementById('endTime').value = info.endStr.split('T')[1].substring(0,5);
 
-    const rows = sheet.getDataRange().getValues();
-
-    const newStart = new Date(data.start);
-    const newEnd = new Date(data.end);
-
-    for(let i=1;i<rows.length;i++){
-
-      const status = rows[i][5];
-
-      if(status === "已自行取消") continue;
-      if(status === "駁回申請") continue;
-
-      const venue = rows[i][9] || "練團室";
-
-      if(venue !== data.venue) continue;
-
-      const existStart = new Date(rows[i][1]);
-      const existEnd = new Date(rows[i][2]);
-
-      const overlap =
-        newStart < existEnd &&
-        newEnd > existStart;
-
-      if(overlap){
-
-        return{
-          success:false,
-          msg:"❌ 該場地此時段已被預約"
-        };
-
+        const status = info.extendedProps.status || "等待審核";
+        const st = document.getElementById('statusText');
+        st.innerText = status;
+        st.style.background = (status === "核准使用" ? "#10b981" : "#f59e0b");
       }
     }
 
-    const now = new Date();
-
-    const timestamp =
-      Utilities.formatDate(
-        now,
-        "GMT+8",
-        "yyyy/MM/dd HH:mm:ss"
-      );
-
-    const regId =
-      "HS" +
-      Utilities.formatDate(now,"GMT+8","yyyyMMdd")
-      + "-"
-      + Math.floor(Math.random()*9000+1000);
-
-    sheet.appendRow([
-      data.name,
-      data.start,
-      data.end,
-      data.purpose,
-      "'" + data.phone,
-      "等待審核",
-      data.ip,
-      timestamp,
-      regId,
-      data.venue,
-      data.email
-    ]);
-
-    sendBookingMail(
-      data.email,
-      regId,
-      data
-    );
-
-    return{
-      success:true,
-      msg:"預約成功！編號：" + regId
+    document.getElementById('saveBtn').onclick = async function() {
+      const venue = document.getElementById('bookingVenue').value;
+      const name = document.getElementById('userName').value;
+      const purpose = document.getElementById('userPurpose').value;
+      const phone = document.getElementById('userPhone').value;
+      const startT = document.getElementById('startTime').value;
+      const endT = document.getElementById('endTime').value;
+      if(!name || !purpose || !phone) { showToast("❌ 請填寫完整資料", true); return; }
+      this.innerText = "傳送中..."; this.disabled = true;
+      let userIp = "Unknown";
+      try { const ipRes = await fetch('https://api.ipify.org?format=json'); const ipData = await ipRes.json(); userIp = ipData.ip; } catch (e) {}
+      const dateStr = currentEvent.startStr.split('T')[0];
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'save', data: { venue, name, purpose, phone, start: `${dateStr}T${startT}:00`, end: `${dateStr}T${endT}:00`, ip: userIp } })
+      }).then(res => res.json()).then(r => { showToast(r.msg || "✅ 預約已送出"); setTimeout(() => location.reload(), 1500); });
     };
 
-  }catch(e){
+    document.getElementById('cancelBtn').onclick = () => document.getElementById('verifyModal').classList.add('active');
 
-    return{
-      success:false,
-      msg:e.toString()
+    document.getElementById('confirmDeleteBtn').onclick = function() {
+      const phone = document.getElementById('verifyPhone').value;
+      if(!phone) { showToast("⚠️ 請輸入電話", true); return; }
+      this.innerText = "處理中...";
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', data: { venue: currentEvent.extendedProps.venue || '練團室', name: currentEvent.extendedProps.name, start: currentEvent.startStr, phone: phone } })
+      }).then(res => res.json()).then(res => {
+        if(res.success) { showToast("🗑️ 預約已成功取消"); setTimeout(() => location.reload(), 1500); }
+        else { showToast("❌ " + res.msg, true); this.innerText = "確定取消預約"; }
+      });
     };
 
-  }
-
-}
-
-/* ===========================
-   取消預約
-=========================== */
-
-function deleteBooking(data){
-
-  try{
-
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName("工作表1");
-
-    const rows = sheet.getDataRange().getValues();
-
-    for(let i=1;i<rows.length;i++){
-
-      const phone =
-        String(rows[i][4])
-        .replace(/'/g,'')
-        .trim();
-
-      const venue =
-        rows[i][9] || "練團室";
-
-      if(
-        rows[i][0] == data.name &&
-        new Date(rows[i][1]).getTime() ==
-        new Date(data.start).getTime() &&
-        phone === String(data.phone).trim() &&
-        venue === data.venue
-      ){
-
-        sheet.getRange(i+1,6)
-          .setValue("已自行取消");
-
-        return{
-          success:true
-        };
-
-      }
-
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.innerText = msg; t.style.background = isError ? "#ef4444" : "#10b981";
+      t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000);
     }
-
-    return{
-      success:false,
-      msg:"驗證失敗：資料不符"
-    };
-
-  }catch(e){
-
-    return{
-      success:false,
-      msg:e.toString()
-    };
-
-  }
-
-}
-
-/* ===========================
-   預約成功Email
-=========================== */
-
-function sendBookingMail(
-  email,
-  regId,
-  data
-){
-
-  if(!email) return;
-
-  MailApp.sendEmail({
-
-    to:email,
-
-    subject:"Henry Space 預約成功通知",
-
-    htmlBody:`
-      <h2>預約已送出</h2>
-
-      <p><b>預約編號：</b>${regId}</p>
-      <p><b>場地：</b>${data.venue}</p>
-      <p><b>姓名：</b>${data.name}</p>
-      <p><b>電話：</b>${data.phone}</p>
-      <p><b>用途：</b>${data.purpose}</p>
-      <p><b>開始：</b>${data.start}</p>
-      <p><b>結束：</b>${data.end}</p>
-
-      <hr>
-
-      <p>目前狀態：等待審核</p>
-    `
-  });
-
-}
-
-/* ===========================
-   狀態變更通知
-=========================== */
-
-function onEdit(e){
-
-  const sheet = e.source.getActiveSheet();
-
-  if(sheet.getName() !== "工作表1") return;
-
-  if(e.range.getColumn() !== 6) return;
-
-  const row = e.range.getRow();
-
-  if(row === 1) return;
-
-  const email =
-    sheet.getRange(row,11).getValue();
-
-  if(!email) return;
-
-  const status =
-    sheet.getRange(row,6).getValue();
-
-  MailApp.sendEmail({
-
-    to:email,
-
-    subject:"Henry Space 預約狀態更新",
-
-    htmlBody:`
-      <h2>預約狀態更新</h2>
-
-      <p><b>目前狀態：</b>${status}</p>
-
-      <hr>
-
-      <p><b>預約編號：</b>${sheet.getRange(row,9).getValue()}</p>
-      <p><b>場地：</b>${sheet.getRange(row,10).getValue()}</p>
-      <p><b>姓名：</b>${sheet.getRange(row,1).getValue()}</p>
-      <p><b>電話：</b>${sheet.getRange(row,5).getValue()}</p>
-      <p><b>用途：</b>${sheet.getRange(row,4).getValue()}</p>
-      <p><b>開始：</b>${sheet.getRange(row,2).getValue()}</p>
-      <p><b>結束：</b>${sheet.getRange(row,3).getValue()}</p>
-    `
-  });
-
-}
+  </script>
+</body>
+</html>
